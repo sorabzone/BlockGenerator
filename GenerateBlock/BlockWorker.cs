@@ -32,9 +32,8 @@ namespace GenerateBlock
             try
             {
                 var starttime = DateTime.Now.TimeOfDay;
-                Console.WriteLine($"\n\nInput file content. \n\n");
-                
-                ReadTransactions();
+
+                if(!ReadTransactions()) return;
 
                 Console.WriteLine($"\n\nRunner in process. Please wait....");
 
@@ -61,7 +60,7 @@ namespace GenerateBlock
         /// This method reads the input file line by line. 
         /// There is option to read lines in parallel, but code is commented because we are working here with only 12 lines
         /// </summary>
-        private void ReadTransactions()
+        private bool ReadTransactions()
         {
             ConcurrentBag<Transaction> transactionsBag = new ConcurrentBag<Transaction>();
 
@@ -90,29 +89,39 @@ namespace GenerateBlock
             //});
 
             //Read lines sequentially
-            foreach (var line in File.ReadLines(@".\input.txt", Encoding.UTF8))
+            Console.WriteLine($"\n\nInput file contents. \n\n");
+            try
             {
-                try
+                foreach (var line in File.ReadLines(@".\input.txt", Encoding.UTF8))
                 {
-                    //print the line
-                    Console.WriteLine($"Line: {line}");
-
-                    var transactionDetail = line.Split("\t");
-
-                    transactionsBag.Add(new Transaction
+                    try
                     {
-                        ID = Convert.ToInt32(transactionDetail[0].Trim()),
-                        Size = Convert.ToInt32(transactionDetail[1].Trim()),
-                        Fee = Convert.ToInt16(Convert.ToDouble(transactionDetail[2].Trim()) * 10000)
-                    });
+                        //print the line
+                        Console.WriteLine($"Line: {line}");
+
+                        var transactionDetail = line.Split("\t");
+
+                        transactionsBag.Add(new Transaction
+                        {
+                            ID = Convert.ToInt32(transactionDetail[0].Trim()),
+                            Size = Convert.ToInt32(transactionDetail[1].Trim()),
+                            Fee = Convert.ToInt16(Convert.ToDouble(transactionDetail[2].Trim()) * 10000)
+                        });
+                    }
+                    catch (System.FormatException)
+                    {
+                        //Console.WriteLine($"Invalid input, ignore and continue: {line}");
+                    }
                 }
-                catch (System.FormatException)
-                {
-                    //Console.WriteLine($"Invalid input, ignore and continue: {line}");
-                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine($"Program expects 'input.txt' file as input. Please copy 'input.txt' in the project directory and try again.");
+                return false;
             }
 
             inputTransactions = transactionsBag.ToList();
+            return true;
         }
 
         /// <summary>
@@ -143,7 +152,7 @@ namespace GenerateBlock
             {
                 ConcurrentDictionary<int, ConcurrentDictionary<string, Combination>> combinationsDictionary = new ConcurrentDictionary<int, ConcurrentDictionary<string, Combination>>();
                 combinationsDictionary.TryAdd(0, new ConcurrentDictionary<string, Combination>());
-                
+
                 //Iterate through each transactions and analyse all conbinations of all lengths that includes the selected transaction
                 for (int used = 0; used < size; used++)
                 {
@@ -263,11 +272,11 @@ namespace GenerateBlock
         {
             string[] answerArray = _maxAnswer.Detail.Substring(1, _maxAnswer.Detail.Length - 2).Split("--");
             var transactions = answerArray.Select(item =>
-                {
-                   return (Convert.ToInt32(item) + 1).ToString();
-                 }).ToArray();
+            {
+                return (Convert.ToInt32(item) + 1).ToString();
+            }).ToArray();
 
-            Console.Write($"Transaction in block : [ {string.Join(", ", transactions)} ]");
+            Console.Write($"Transactions in block : [ {string.Join(", ", transactions)} ]");
         }
     }
 }
